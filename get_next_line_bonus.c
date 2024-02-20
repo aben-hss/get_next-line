@@ -1,167 +1,120 @@
-
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   get_next_line_bonus.c                              :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: aben-hss <marvin@42.fr>                    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/01/14 16:30:53 by aben-hss          #+#    #+#             */
+/*   Updated: 2024/01/14 16:30:55 by aben-hss         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
 #include "get_next_line_bonus.h"
-#include <libc.h>
 
-void my_free(void *ptr)
+#ifndef BUFFER_SIZE
+# define BUFFER_SIZE 40
+#endif
+
+char	*join_strings(char *s1, char *s2)
 {
-	if (ptr)
-		free(ptr);
-	ptr = NULL;
+	char	*data;
+
+	if (!s1 && s2)
+		return (s2);
+	if (!*s2)
+		return (free(s2), s1);
+	data = (char *) malloc(sizeof(char) * (ft_strlen(s1) + ft_strlen(s2) + 1));
+	if (!data)
+		return (free(s1), free(s2), s1 = NULL, NULL);
+	ft_strcpy(data, s1);
+	ft_strcat(data, s2);
+	free(s1);
+	free(s2);
+	return (data);
 }
 
-char *join_strings(char *s1, char *s2)
+char	*extract_line(char *str)
 {
-	char *ret;
-	if(!s1 && s2)
-		return(s2);
-	if (s1 && !s2)
-		return (s1);
-	if (!s1 && !s2)
-		return (NULL);
+	char	*line;
+	int		size;
+	int		i;
 
-	ret = (char *) malloc(sizeof(char) * (strlen(s1) + strlen(s2) + 1));
-	if(!ret)
-		return(NULL);
-	strcpy(ret,s1);
-	strcat(ret,s2);
-	my_free(s1);
-	my_free(s2);
-	return(ret);
-}
-int contains_new_line(char *str)
-{
-	if(!str || !(*str))
-	{
-		my_free(str);
-		return(0);
-	}
-	while(*str)
-	{
-		if(*str == '\n')
-			return(1);
-		str++;
-	}
-	return(0);
-}
-
-char *extract_line(char *str)
-{
-	char *ret;
-	int size;
 	size = 0;
-	if(!str)
-		return(NULL);
-	while(str[size] && str[size]!= '\n')
-		size++;
-	if(str[size] == '\n')
-		size++;
-	ret = malloc(sizeof(char) * (size + 1));
-	if (!ret)
+	if (!str)
 		return (NULL);
-	int i = 0;
-	while(i < size && str[i])
+	while (str[size] && str[size] != '\n')
+		size++;
+	if (str[size] == '\n')
+		size++;
+	line = malloc(sizeof(char) * (size + 1));
+	if (!line)
+		return (NULL);
+	i = 0;
+	while (i < size && str[i])
 	{
-		ret[i] = str[i];
+		line[i] = str[i];
 		i++;
 	}
-	ret[i] = '\0';
-	if(!*ret)
-		return	(my_free(ret), NULL);
-	return(ret);
+	line[i] = '\0';
+	if (!*line)
+		return (free(line), NULL);
+	return (line);
 }
-char  *extract_rest(char *str)
+
+char	*extract_rest(char *str)
 {
-	int i = 0;
-	char *ret;
-	if(!str || !(*str))
-		return(NULL);
-	while(str[i] && str[i] != '\n')
+	int		i;
+	int		j;
+	char	*rest;
+
+	i = 0;
+	if (!str)
+		return (NULL);
+	if (!*str)
+		return (free(str), str = NULL, NULL);
+	while (str[i] && str[i] != '\n')
 		i++;
-	if(str[i] == '\n')
+	if (str[i] == '\n')
 		i++;
-	ret = malloc(sizeof(char) * strlen(str+i) + 1);
-	if(!ret)
-		return(NULL);
-	int j = 0;
-	while(str[i])
-		ret[j++] = str[i++];
-	ret[j] = '\0';
-	my_free(str);
-	if(!ret[0])
-		return	(my_free(ret), ret = NULL, NULL);
-	return(ret);
+	rest = malloc(sizeof(char) * ft_strlen(str + i) + 1);
+	if (!rest)
+		return (free(str), str = NULL, NULL);
+	j = 0;
+	while (str[i])
+		rest[j++] = str[i++];
+	rest[j] = '\0';
+	free(str);
+	if (!rest[0])
+		return (free(rest), NULL);
+	return (rest);
 }
+
 char	*get_next_line(int fd)
 {
-	char *ret;
-	static char *rest[OPEN_MAX];
-	char *tmp;
-	ssize_t n;
+	static char	*rest[OPEN_MAX];
+	char		*line;
+	char		*buffer;
+	ssize_t		n;
 
-	ret = NULL;
-	if(BUFFER_SIZE <= 0 || BUFFER_SIZE > SIZE_T_MAX || read(fd, 0, 0) < 0)
-	{
-		my_free(ret);
-		my_free(rest[fd]);
+	line = NULL;
+	if (BUFFER_SIZE <= 0 || fd < 0 || fd >= OPEN_MAX || BUFFER_SIZE > INT_MAX)
 		return (NULL);
-	}
 	n = 1;
-	while(n && !contains_new_line(rest[fd]))
+	while (n && !contains_new_line(rest[fd]))
 	{
-		tmp = (char *) malloc(sizeof(char) * ((size_t)BUFFER_SIZE + 1));
-		if(!tmp)
-		{
-			my_free(rest[fd]);
-			return (NULL);
-		}
-		n  = read(fd,tmp,BUFFER_SIZE);
-
-		if(n < 0)
-		{
-			my_free(tmp);
-			my_free(rest[fd]);
-			return(NULL);
-		}
-		tmp[n] = '\0';
-		rest[fd] = join_strings(rest[fd],tmp);
-		if(n < BUFFER_SIZE)
-			break;
+		buffer = (char *) malloc(sizeof(char) * ((size_t)BUFFER_SIZE + 1));
+		if (!buffer)
+			return (free(rest[fd]), rest[fd] = NULL, NULL);
+		n = read(fd, buffer, BUFFER_SIZE);
+		if (n < 0)
+			return (free(buffer), free(rest[fd]), rest[fd] = NULL, NULL);
+		buffer[n] = '\0';
+		rest[fd] = join_strings(rest[fd], buffer);
 	}
-	ret = extract_line(rest[fd]);
-	if(!ret)
-		return(my_free(rest[fd]),rest[fd]=NULL,NULL);
+	line = extract_line(rest[fd]);
+	if (!line)
+		return (free(rest[fd]), rest[fd] = NULL, NULL);
 	rest[fd] = extract_rest(rest[fd]);
-	return(ret);
+	return (line);
 }
-
-// int main()
-// {
-// 	int fd = open("file.txt",O_RDONLY);
-// 	printf("%s",get_next_line(fd));
-// 	printf("%s",get_next_line(2));
-// 	printf("%s",get_next_line(1));
-// 	printf("%s",get_next_line(-1));
-// 	printf("%s",get_next_line(0));
-// }
-
-// int main(void)
-// {
-//     int fd = open("example.txt", O_RDONLY);
-//     if (fd == -1)
-//     {
-//         perror("Error opening file");
-//         return 1;
-//     }
-
-//     char *line;
-//     while ((line = get_next_line(fd)) != NULL)
-//     {
-//         printf("%s\n", line);
-//         free(line);
-//     }
-
-//     close(fd);
-//     return 0;
-// }
-
